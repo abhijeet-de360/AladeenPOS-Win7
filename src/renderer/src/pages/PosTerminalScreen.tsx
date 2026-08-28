@@ -17,6 +17,7 @@ import {
 import { ShoppingBag, Plus, Minus, Trash2, Utensils, Clock, Coins, QrCode, Percent } from 'lucide-react'
 import HeaderLayout from '../components/HeaderLayout'
 import { Product, Order } from '../types'
+import { printThermalReceipt } from '../utils/printReceipt'
 
 export default function PosTerminalScreen(): React.JSX.Element {
   const dispatch = useDispatch<AppDispatch>()
@@ -132,11 +133,12 @@ export default function PosTerminalScreen(): React.JSX.Element {
   }
 
   const handleSimulatePrint = (): void => {
+    if (!receiptOrder) return
     setIsSimulatingPrint(true)
+    printThermalReceipt(receiptOrder)
     setTimeout(() => {
       setIsSimulatingPrint(false)
-      alert('Mock print ticket sent successfully to POS Thermal Receipt printer.')
-    }, 1200)
+    }, 1000)
   }
 
   const renderTableCard = (tableName: string, label: string, isTakeaway = false): React.JSX.Element => {
