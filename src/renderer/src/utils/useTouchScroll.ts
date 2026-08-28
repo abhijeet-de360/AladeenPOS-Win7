@@ -101,6 +101,9 @@ export function setupGlobalTouchScroll(): () => void {
   function handleInputTap(e: Event) {
     const target = e.target as HTMLElement | null
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+      if (target.getAttribute('data-no-virtual-keyboard') === 'true') {
+        return
+      }
       if (window.api && typeof (window.api as any).openVirtualKeyboard === 'function') {
         try {
           ;(window.api as any).openVirtualKeyboard()

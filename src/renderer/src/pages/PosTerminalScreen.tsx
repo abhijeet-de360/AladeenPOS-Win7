@@ -16,7 +16,6 @@ import {
 } from '../store/tableTabsSlice'
 import { ShoppingBag, Plus, Minus, Trash2, Utensils, Clock, Coins, QrCode, Percent } from 'lucide-react'
 import HeaderLayout from '../components/HeaderLayout'
-import VirtualKeyboard from '../components/VirtualKeyboard'
 import { Product, Order } from '../types'
 import { printThermalReceipt } from '../utils/printReceipt'
 
@@ -47,7 +46,6 @@ export default function PosTerminalScreen(): React.JSX.Element {
   const [posCategory, setPosCategory] = useState<string>('all')
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null)
   const [isSimulatingPrint, setIsSimulatingPrint] = useState(false)
-  const [showDiscountKeyboard, setShowDiscountKeyboard] = useState(false)
 
   // Map Redux store posMenuList to Product items
   const productsList: Product[] = useMemo(() => {
@@ -304,53 +302,85 @@ export default function PosTerminalScreen(): React.JSX.Element {
             {/* Discount Row (1st: Text Box -> 2nd: % Discount -> 3rd: Amount) */}
             <div className="pos-summary-row" style={{ alignItems: 'center', marginTop: '4px', marginBottom: '4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  placeholder="0"
-                  style={{
-                    width: '46px',
-                    padding: '4px 6px',
-                    borderRadius: '8px',
-                    border: '1px solid #d1d5db',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    textAlign: 'center',
-                    outline: 'none'
-                  }}
-                  value={discountPercentage || ''}
-                  onChange={(e): void => {
-                    const rawVal = e.target.value
-                    const parsed = parseInt(rawVal, 10)
-                    const val = isNaN(parsed) ? 0 : Math.min(100, Math.max(0, parsed))
-                    dispatch(setTabDiscount({ tableId: activeTableId, discountPercentage: val }))
-                    triggerAutoSave(activeTableId)
-                  }}
-                  onClick={(): void => {
-                    setShowDiscountKeyboard(true)
-                    if (window.api && (window.api as any).openVirtualKeyboard) {
-                      ;(window.api as any).openVirtualKeyboard()
-                    }
-                  }}
-                  onFocus={(): void => {
-                    setShowDiscountKeyboard(true)
-                    if (window.api && (window.api as any).openVirtualKeyboard) {
-                      ;(window.api as any).openVirtualKeyboard()
-                    }
-                  }}
-                />
-                <VirtualKeyboard
-                  isOpen={showDiscountKeyboard}
-                  onClose={(): void => setShowDiscountKeyboard(false)}
-                  value={discountPercentage ? String(discountPercentage) : ''}
-                  onChange={(val): void => {
-                    const parsed = parseInt(val, 10)
-                    const discountVal = isNaN(parsed) ? 0 : Math.min(100, Math.max(0, parsed))
-                    dispatch(setTabDiscount({ tableId: activeTableId, discountPercentage: discountVal }))
-                    triggerAutoSave(activeTableId)
-                  }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <button
+                    type="button"
+                    onClick={(): void => {
+                      const current = discountPercentage || 0
+                      const newVal = Math.max(0, current - 1)
+                      dispatch(setTabDiscount({ tableId: activeTableId, discountPercentage: newVal }))
+                      triggerAutoSave(activeTableId)
+                    }}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '6px',
+                      border: '1px solid #d1d5db',
+                      background: 'var(--bg-secondary, #f3f4f6)',
+                      color: 'var(--text-primary, #111827)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                    title="Decrease discount"
+                  >
+                    <Minus size={12} />
+                  </button>
+
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="0"
+                    data-no-virtual-keyboard="true"
+                    style={{
+                      width: '40px',
+                      padding: '3px 2px',
+                      borderRadius: '6px',
+                      border: '1px solid #d1d5db',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                      outline: 'none'
+                    }}
+                    value={discountPercentage || ''}
+                    onChange={(e): void => {
+                      const rawVal = e.target.value
+                      const parsed = parseInt(rawVal, 10)
+                      const val = isNaN(parsed) ? 0 : Math.min(100, Math.max(0, parsed))
+                      dispatch(setTabDiscount({ tableId: activeTableId, discountPercentage: val }))
+                      triggerAutoSave(activeTableId)
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={(): void => {
+                      const current = discountPercentage || 0
+                      const newVal = Math.min(100, current + 1)
+                      dispatch(setTabDiscount({ tableId: activeTableId, discountPercentage: newVal }))
+                      triggerAutoSave(activeTableId)
+                    }}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '6px',
+                      border: '1px solid #d1d5db',
+                      background: 'var(--bg-secondary, #f3f4f6)',
+                      color: 'var(--text-primary, #111827)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                    title="Increase discount"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </div>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Percent size={13} color="var(--primary)" />
                   Discount

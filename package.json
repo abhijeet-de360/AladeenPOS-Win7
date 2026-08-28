@@ -1,6 +1,6 @@
 {
   "name": "aladeen-pos",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Aladeen POS System",
   "main": "./out/main/index.js",
   "author": "Aladeen POS",
