@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Printer, Search, ShoppingBag, Globe, CheckCircle2, Clock, Calendar } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import HeaderLayout from '../components/HeaderLayout'
+import VirtualKeyboard from '../components/VirtualKeyboard'
 import { Order } from '../types'
 import { RootState, AppDispatch } from '../store/store'
 import { fetchOrderHistoryThunk } from '../store/orderHistorySlice'
@@ -14,6 +15,7 @@ export default function OrderHistoryScreen(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null)
   const [isSimulatingPrint, setIsSimulatingPrint] = useState(false)
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false)
 
   useEffect(() => {
     dispatch(fetchOrderHistoryThunk(filterType, searchQuery, true))
@@ -93,6 +95,25 @@ export default function OrderHistoryScreen(): React.JSX.Element {
                 placeholder="Search Order ID, Client, Items..."
                 value={searchQuery}
                 onChange={(e): void => setSearchQuery(e.target.value)}
+                onClick={(): void => {
+                  setShowVirtualKeyboard(true)
+                  if (window.api && (window.api as any).openVirtualKeyboard) {
+                    ;(window.api as any).openVirtualKeyboard()
+                  }
+                }}
+                onFocus={(): void => {
+                  setShowVirtualKeyboard(true)
+                  if (window.api && (window.api as any).openVirtualKeyboard) {
+                    ;(window.api as any).openVirtualKeyboard()
+                  }
+                }}
+              />
+              <VirtualKeyboard
+                isOpen={showVirtualKeyboard}
+                onClose={(): void => setShowVirtualKeyboard(false)}
+                value={searchQuery}
+                onChange={(val): void => setSearchQuery(val)}
+                title="Order History Search Keyboard"
               />
             </div>
           </div>

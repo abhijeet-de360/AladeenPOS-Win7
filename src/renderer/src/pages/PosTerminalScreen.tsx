@@ -16,6 +16,7 @@ import {
 } from '../store/tableTabsSlice'
 import { ShoppingBag, Plus, Minus, Trash2, Utensils, Clock, Coins, QrCode, Percent } from 'lucide-react'
 import HeaderLayout from '../components/HeaderLayout'
+import VirtualKeyboard from '../components/VirtualKeyboard'
 import { Product, Order } from '../types'
 import { printThermalReceipt } from '../utils/printReceipt'
 
@@ -46,6 +47,7 @@ export default function PosTerminalScreen(): React.JSX.Element {
   const [posCategory, setPosCategory] = useState<string>('all')
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null)
   const [isSimulatingPrint, setIsSimulatingPrint] = useState(false)
+  const [showDiscountKeyboard, setShowDiscountKeyboard] = useState(false)
 
   // Map Redux store posMenuList to Product items
   const productsList: Product[] = useMemo(() => {
@@ -323,6 +325,29 @@ export default function PosTerminalScreen(): React.JSX.Element {
                     const parsed = parseInt(rawVal, 10)
                     const val = isNaN(parsed) ? 0 : Math.min(100, Math.max(0, parsed))
                     dispatch(setTabDiscount({ tableId: activeTableId, discountPercentage: val }))
+                    triggerAutoSave(activeTableId)
+                  }}
+                  onClick={(): void => {
+                    setShowDiscountKeyboard(true)
+                    if (window.api && (window.api as any).openVirtualKeyboard) {
+                      ;(window.api as any).openVirtualKeyboard()
+                    }
+                  }}
+                  onFocus={(): void => {
+                    setShowDiscountKeyboard(true)
+                    if (window.api && (window.api as any).openVirtualKeyboard) {
+                      ;(window.api as any).openVirtualKeyboard()
+                    }
+                  }}
+                />
+                <VirtualKeyboard
+                  isOpen={showDiscountKeyboard}
+                  onClose={(): void => setShowDiscountKeyboard(false)}
+                  value={discountPercentage ? String(discountPercentage) : ''}
+                  onChange={(val): void => {
+                    const parsed = parseInt(val, 10)
+                    const discountVal = isNaN(parsed) ? 0 : Math.min(100, Math.max(0, parsed))
+                    dispatch(setTabDiscount({ tableId: activeTableId, discountPercentage: discountVal }))
                     triggerAutoSave(activeTableId)
                   }}
                 />

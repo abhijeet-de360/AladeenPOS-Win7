@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Delete, X, CornerDownLeft, Space, Type } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Delete, CornerDownLeft, Space } from 'lucide-react'
 
 interface VirtualKeyboardProps {
   isOpen: boolean
@@ -15,10 +15,46 @@ export default function VirtualKeyboard({
   onClose,
   value,
   onChange,
-  onEnter,
-  title = 'Touch Screen Keyboard'
+  onEnter
 }: VirtualKeyboardProps): React.JSX.Element | null {
   const [isCaps, setIsCaps] = useState(false)
+  const keyboardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('keyboard-docked-open')
+    } else {
+      document.body.classList.remove('keyboard-docked-open')
+    }
+    return () => {
+      document.body.classList.remove('keyboard-docked-open')
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      if (keyboardRef.current && !keyboardRef.current.contains(event.target as Node)) {
+        const target = event.target as HTMLElement | null
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+          return
+        }
+        onClose()
+      }
+    }
+
+    const timer = setTimeout(() => {
+      document.addEventListener('pointerdown', handleClickOutside, { capture: true })
+      document.addEventListener('click', handleClickOutside, { capture: true })
+    }, 100)
+
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('pointerdown', handleClickOutside, { capture: true })
+      document.removeEventListener('click', handleClickOutside, { capture: true })
+    }
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
@@ -46,26 +82,7 @@ export default function VirtualKeyboard({
   }
 
   return (
-    <div className="vk-container" onClick={(e) => e.stopPropagation()}>
-      <div className="vk-header">
-        <div className="vk-title">
-          <Type size={16} color="#ff5252" />
-          <span>{title}</span>
-        </div>
-        <div className="vk-preview">
-          <input
-            type="text"
-            className="vk-preview-input"
-            value={value}
-            readOnly
-            placeholder="Type text using touch..."
-          />
-        </div>
-        <button className="vk-close-btn" onClick={onClose} title="Close Keyboard">
-          <X size={18} />
-        </button>
-      </div>
-
+    <div ref={keyboardRef} className="vk-container" onClick={(e) => e.stopPropagation()}>
       <div className="vk-rows">
         {/* Numbers Row */}
         <div className="vk-row">

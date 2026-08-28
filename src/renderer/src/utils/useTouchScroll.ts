@@ -98,10 +98,10 @@ export function setupGlobalTouchScroll(): () => void {
     }
   }
 
-  function handleFocusIn(e: FocusEvent) {
+  function handleInputTap(e: Event) {
     const target = e.target as HTMLElement | null
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-      if (window.api && (window.api as any).openVirtualKeyboard) {
+      if (window.api && typeof (window.api as any).openVirtualKeyboard === 'function') {
         try {
           ;(window.api as any).openVirtualKeyboard()
         } catch (err) {
@@ -117,7 +117,8 @@ export function setupGlobalTouchScroll(): () => void {
   window.addEventListener('pointerup', handlePointerUp, { capture: true })
   window.addEventListener('pointercancel', handlePointerUp, { capture: true })
   window.addEventListener('click', handleClickCapture, { capture: true })
-  window.addEventListener('focusin', handleFocusIn, { capture: true })
+  window.addEventListener('focusin', handleInputTap, { capture: true })
+  window.addEventListener('click', handleInputTap, { capture: true })
 
   return () => {
     window.removeEventListener('pointerdown', handlePointerDown, { capture: true })
@@ -125,7 +126,8 @@ export function setupGlobalTouchScroll(): () => void {
     window.removeEventListener('pointerup', handlePointerUp, { capture: true })
     window.removeEventListener('pointercancel', handlePointerUp, { capture: true })
     window.removeEventListener('click', handleClickCapture, { capture: true })
-    window.removeEventListener('focusin', handleFocusIn, { capture: true })
+    window.removeEventListener('focusin', handleInputTap, { capture: true })
+    window.removeEventListener('click', handleInputTap, { capture: true })
   }
 }
 

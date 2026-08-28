@@ -122,8 +122,13 @@ export const printThermalReceipt = async (order: Order, _prepMins?: number): Pro
 
     // Use native Electron silent printing to the OS default thermal printer
     if (window.api && typeof window.api.printThermalReceipt === 'function') {
-      const res = await window.api.printThermalReceipt(htmlContent)
+      const res: any = await window.api.printThermalReceipt(htmlContent)
       console.log('Electron native thermal print result:', res)
+      if (res && res.success) {
+        alert(`Print Success!\nTicket sent to thermal printer: ${res.deviceName || 'System Printer'}`)
+      } else if (res) {
+        alert(`Print Error!\nTarget Printer: ${res.deviceName || 'Unknown Printer'}\nReason: ${res.reason || res.error || 'Failed to send print job'}`)
+      }
       return
     }
 

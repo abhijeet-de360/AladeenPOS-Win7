@@ -277,6 +277,16 @@ export default function OnlineOrdersScreen(): React.JSX.Element {
                 style={{ padding: '8px 12px' }}
                 value={prepTimeInput}
                 onChange={(e): void => setPrepTimeInput(e.target.value)}
+                onClick={(): void => {
+                  if (window.api && (window.api as any).openVirtualKeyboard) {
+                    ;(window.api as any).openVirtualKeyboard()
+                  }
+                }}
+                onFocus={(): void => {
+                  if (window.api && (window.api as any).openVirtualKeyboard) {
+                    ;(window.api as any).openVirtualKeyboard()
+                  }
+                }}
                 placeholder="Custom minutes..."
               />
             </div>

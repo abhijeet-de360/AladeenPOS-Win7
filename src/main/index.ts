@@ -71,12 +71,14 @@ function setupAutoUpdater(): void {
 }
 
 function createWindow(): void {
-  // Create the browser window.
+  // Create the browser window in full screen mode for POS terminals.
   mainWindow = new BrowserWindow({
     title: 'Aladeen POS',
     icon,
+    show: false,
     width: 1280,
     height: 800,
+    fullscreen: true,
     autoHideMenuBar: true,
     frame: process.platform === 'darwin' ? false : true,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
@@ -90,6 +92,8 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
+    mainWindow?.maximize()
+    mainWindow?.setFullScreen(true)
     mainWindow?.show()
   })
 
@@ -151,16 +155,20 @@ app.whenReady().then(() => {
   // IPC Open Virtual On-Screen Touch Keyboard for Windows POS
   ipcMain.on('open-virtual-keyboard', () => {
     if (process.platform === 'win32') {
-      exec('cmd /c start tabtip.exe', (err) => {
+      exec('powershell -Command "Start-Process tabtip.exe"', (err) => {
         if (err) {
-          exec('osk.exe', () => {})
+          exec('cmd /c start tabtip.exe', (err2) => {
+            if (err2) {
+              exec('cmd /c start osk.exe', () => {})
+            }
+          })
         }
       })
     }
   })
 
   // IPC Direct Thermal Receipt Printer
-  ipcMain.handle('print-thermal-receipt', async (_event, htmlContent: string) => {
+  ipcMain.handle('print-thermal-receipt', async (_event, htmlContent: string, targetDeviceName?: string) => {
     return new Promise((resolve) => {
       try {
         const printWin = new BrowserWindow({
@@ -173,10 +181,50 @@ app.whenReady().then(() => {
         printWin.webContents.on('did-finish-load', async () => {
           try {
             const printers = await printWin.webContents.getPrintersAsync()
-            const defaultPrinter = printers.find((p: any) => p.isDefault || p.status === 0) || printers[0]
-            const deviceName = defaultPrinter ? defaultPrinter.name : ''
 
-            console.log('Printing directly to printer device:', deviceName || 'System Default')
+            // Filter out virtual file output printers (XPS/PDF) which force "Save As" file dialogs
+            const isVirtualPrinter = (name: string) => {
+              const lower = name.toLowerCase()
+              return (
+                lower.includes('xps') ||
+                lower.includes('pdf') ||
+                lower.includes('onenote') ||
+                lower.includes('fax') ||
+                lower.includes('document writer')
+              )
+            }
+
+            const physicalPrinters = printers.filter((p: any) => !isVirtualPrinter(p.name))
+
+            // 1. Target printer explicitly specified
+            let selectedPrinter = targetDeviceName ? printers.find((p: any) => p.name === targetDeviceName) : null
+
+            // 2. System default physical printer
+            if (!selectedPrinter) {
+              selectedPrinter = physicalPrinters.find((p: any) => p.isDefault)
+            }
+
+            // 3. Match POS / Thermal / Receipt printer names
+            if (!selectedPrinter) {
+              const thermalKeywords = ['pos', 'receipt', 'thermal', 'xprinter', 'epson', 'bixolon', 'zjiang', 'rongta', 'tvs', 'citizen', 'star', 'rp-', '80mm', '58mm', 'ticket']
+              selectedPrinter = physicalPrinters.find((p: any) =>
+                thermalKeywords.some((kw) => p.name.toLowerCase().includes(kw))
+              )
+            }
+
+            // 4. Any physical printer attached
+            if (!selectedPrinter && physicalPrinters.length > 0) {
+              selectedPrinter = physicalPrinters[0]
+            }
+
+            // 5. Fallback to default
+            if (!selectedPrinter) {
+              selectedPrinter = printers.find((p: any) => p.isDefault) || printers[0]
+            }
+
+            const deviceName = selectedPrinter ? selectedPrinter.name : ''
+
+            console.log('[Direct Print] Selected printer device:', deviceName || 'System Default')
 
             printWin.webContents.print(
               {
@@ -189,16 +237,16 @@ app.whenReady().then(() => {
                   printWin.close()
                 } catch (e) {}
                 if (!success) {
-                  console.warn('Silent print status:', failureReason)
-                  resolve({ success: false, reason: failureReason })
+                  console.warn('[Direct Print] Status:', failureReason)
+                  resolve({ success: false, reason: failureReason, deviceName })
                 } else {
-                  console.log('Printed successfully to device:', deviceName)
-                  resolve({ success: true })
+                  console.log('[Direct Print] Successfully printed to device:', deviceName)
+                  resolve({ success: true, deviceName })
                 }
               }
             )
           } catch (printErr: any) {
-            console.error('Print execution error:', printErr)
+            console.error('[Direct Print] Execution error:', printErr)
             try {
               printWin.close()
             } catch (e) {}
@@ -208,7 +256,7 @@ app.whenReady().then(() => {
 
         printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`)
       } catch (err: any) {
-        console.error('Error printing receipt:', err)
+        console.error('[Direct Print] Error initializing print window:', err)
         resolve({ success: false, error: err.message })
       }
     })
