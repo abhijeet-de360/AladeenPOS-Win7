@@ -4,8 +4,9 @@ import { useDispatch, useSelector } from 'react-redux'
 import { logout } from '../store/authSlice'
 import { RootState, AppDispatch } from '../store/store'
 import { markAllAsRead, clearNotifications } from '../store/notificationsSlice'
-import { LogOut, Maximize2, Search, Bell, BellRing, CheckCheck, Trash2, ShoppingBag } from 'lucide-react'
+import { LogOut, Maximize2, Search, Bell, BellRing, CheckCheck, Trash2, ShoppingBag, Keyboard } from 'lucide-react'
 import logoImg from '../assets/logo.png'
+import VirtualKeyboard from './VirtualKeyboard'
 
 interface HeaderLayoutProps {
   children: React.ReactNode
@@ -28,6 +29,7 @@ export default function HeaderLayout({
 
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showNotifDropdown, setShowNotifDropdown] = useState(false)
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false)
 
   const handleLogoutClick = (): void => {
     setShowLogoutModal(true)
@@ -60,10 +62,31 @@ export default function HeaderLayout({
               placeholder="Search POS items or code..."
               value={searchValue || ''}
               onChange={(e) => onSearchChange(e.target.value)}
+              onFocus={() => {
+                if (window.api && (window.api as any).openVirtualKeyboard) {
+                  ;(window.api as any).openVirtualKeyboard()
+                }
+              }}
             />
+            <button
+              type="button"
+              className="foodeology-search-btn"
+              style={{ right: '40px', background: '#f3f4f6', color: '#374151' }}
+              title="Open Touch Keyboard"
+              onClick={() => setShowVirtualKeyboard(!showVirtualKeyboard)}
+            >
+              <Keyboard size={16} />
+            </button>
             <button className="foodeology-search-btn">
               <Search size={18} />
             </button>
+            <VirtualKeyboard
+              isOpen={showVirtualKeyboard}
+              onClose={() => setShowVirtualKeyboard(false)}
+              value={searchValue || ''}
+              onChange={(val) => onSearchChange(val)}
+              title="POS Item Search Keyboard"
+            />
           </div>
         )}
 

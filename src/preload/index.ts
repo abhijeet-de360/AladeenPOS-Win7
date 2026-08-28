@@ -7,7 +7,8 @@ const api = {
   maximize: (): void => ipcRenderer.send('window-maximize'),
   toggleFullscreen: (): void => ipcRenderer.send('window-toggle-fullscreen'),
   close: (): void => ipcRenderer.send('window-close'),
-  printThermalReceipt: (htmlContent: string) => ipcRenderer.invoke('print-thermal-receipt', htmlContent)
+  printThermalReceipt: (htmlContent: string) => ipcRenderer.invoke('print-thermal-receipt', htmlContent),
+  openVirtualKeyboard: (): void => ipcRenderer.send('open-virtual-keyboard')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

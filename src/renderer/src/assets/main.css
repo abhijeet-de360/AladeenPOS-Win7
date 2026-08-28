@@ -25,6 +25,28 @@ body {
   color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* Touch Panning & Drag Scroll Support for Windows 10 POS Machines */
+.pos-grid,
+.pos-cart-items,
+.table-grid-body,
+.online-grid,
+.history-table-container,
+.notif-list,
+.modal-content,
+[data-touch-scroll='true'] {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.pos-categories {
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 #root {
@@ -1910,4 +1932,170 @@ body {
   text-align: center;
   border-top: 1px solid #f3f4f6;
   background: #fafafa;
+}
+
+/* --- Touch Screen Virtual Keyboard Overlay Styles --- */
+.vk-container {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92%;
+  max-width: 780px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1.5px solid #e5e7eb;
+  z-index: 99999;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slideUpKeyboard 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+@keyframes slideUpKeyboard {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 30px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.vk-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.vk-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.vk-preview {
+  flex: 1;
+}
+
+.vk-preview-input {
+  width: 100%;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  outline: none;
+}
+
+.vk-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.vk-close-btn:hover {
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+.vk-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vk-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.vk-key {
+  flex: 1;
+  min-width: 38px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+}
+
+.vk-key:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.vk-key:active {
+  background: #ff5252;
+  color: #ffffff;
+  border-color: #ff5252;
+  transform: scale(0.96);
+}
+
+.vk-key-action {
+  font-size: 13px;
+  background: #f9fafb;
+  color: #4b5563;
+  flex: 1.3;
+}
+
+.vk-key-action.active {
+  background: #ff5252;
+  color: #ffffff;
+  border-color: #ff5252;
+}
+
+.vk-key-action.danger:hover {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.vk-key-space {
+  flex: 4;
+  background: #f9fafb;
+  font-size: 14px;
+}
+
+.vk-key-enter {
+  flex: 2.5;
+  background: #ff5252;
+  color: #ffffff;
+  border-color: #ff5252;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3);
+}
+
+.vk-key-enter:hover {
+  background: #ef4444;
 }

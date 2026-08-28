@@ -21,7 +21,10 @@ import OrderHistoryScreen from './pages/OrderHistoryScreen'
 import PrivateRoute from './components/PrivateRoute'
 import GlobalOrderPopup from './components/GlobalOrderPopup'
 
+import { useTouchScroll } from './utils/useTouchScroll'
+
 function App(): React.JSX.Element {
+  useTouchScroll()
   const dispatch = useDispatch<AppDispatch>()
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated)
 

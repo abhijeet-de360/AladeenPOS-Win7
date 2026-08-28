@@ -4,9 +4,16 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
 
-// Enable support for older Windows 7 root certificate store
+import { exec } from 'child_process'
+
+// Enable support for older Windows 7 root certificate store & Windows Touchscreen POS displays
 app.commandLine.appendSwitch('ignore-certificate-errors')
 app.commandLine.appendSwitch('allow-insecure-localhost', 'true')
+app.commandLine.appendSwitch('touch-events', 'enabled')
+app.commandLine.appendSwitch('enable-touch-drag-drop')
+app.commandLine.appendSwitch('enable-pinch')
+app.commandLine.appendSwitch('enable-viewport')
+app.commandLine.appendSwitch('enable-virtual-keyboard')
 
 app.on('certificate-error', (event, _webContents, _url, _error, _certificate, callback) => {
   event.preventDefault()
@@ -139,6 +146,17 @@ app.whenReady().then(() => {
   })
   ipcMain.on('window-close', () => {
     mainWindow?.close()
+  })
+
+  // IPC Open Virtual On-Screen Touch Keyboard for Windows POS
+  ipcMain.on('open-virtual-keyboard', () => {
+    if (process.platform === 'win32') {
+      exec('cmd /c start tabtip.exe', (err) => {
+        if (err) {
+          exec('osk.exe', () => {})
+        }
+      })
+    }
   })
 
   // IPC Direct Thermal Receipt Printer
