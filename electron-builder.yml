@@ -29,9 +29,11 @@ nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
-  oneClick: true
+  oneClick: false
   perMachine: false
   allowElevation: true
+  allowToChangeInstallationDirectory: true
+  runAfterFinish: true
   createDesktopShortcut: always
   createStartMenuShortcut: true
 portable:
@@ -58,4 +60,5 @@ appImage:
 npmRebuild: false
 publish:
   provider: generic
-  url: https://aladeenpos.com/auto-updates
+  url: https://pos.aladeenbangkok.com/auto-updates
+
