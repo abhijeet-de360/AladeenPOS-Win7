@@ -6,6 +6,7 @@ import VirtualKeyboard from '../components/VirtualKeyboard'
 import { Order } from '../types'
 import { RootState, AppDispatch } from '../store/store'
 import { fetchOrderHistoryThunk } from '../store/orderHistorySlice'
+import { printThermalReceipt } from '../utils/printReceipt'
 
 export default function OrderHistoryScreen(): React.JSX.Element {
   const dispatch = useDispatch<AppDispatch>()
@@ -21,12 +22,14 @@ export default function OrderHistoryScreen(): React.JSX.Element {
     dispatch(fetchOrderHistoryThunk(filterType, searchQuery, true))
   }, [dispatch, filterType, searchQuery])
 
-  const handleSimulatePrint = (): void => {
+  const handlePrintReceipt = async (): Promise<void> => {
+    if (!receiptOrder) return
     setIsSimulatingPrint(true)
-    setTimeout(() => {
+    try {
+      await printThermalReceipt(receiptOrder)
+    } finally {
       setIsSimulatingPrint(false)
-      alert('Mock print ticket sent successfully to POS Thermal Receipt printer.')
-    }, 1200)
+    }
   }
 
   return (
@@ -215,14 +218,26 @@ export default function OrderHistoryScreen(): React.JSX.Element {
                 ) : null}
 
                 <div className="receipt-divider"></div>
-                  <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '4px' }}>ORDER ITEMS</div>
-                  <div style={{ fontSize: '10px', whiteSpace: 'pre-wrap' }}>
-                    {receiptOrder.items.split(', ').map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{item}</span>
+                <div style={{ fontWeight: 'bold', fontSize: '10.5px', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>ORDER ITEMS</span>
+                  <span>PRICE</span>
+                </div>
+                <div style={{ fontSize: '10.5px' }}>
+                  {receiptOrder.itemList && receiptOrder.itemList.length > 0 ? (
+                    receiptOrder.itemList.map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                        <span style={{ flex: 1, paddingRight: '8px' }}>{item.quantity}x {item.name}</span>
+                        <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>฿{(item.price * item.quantity).toFixed(2)}</span>
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    (receiptOrder.items || '').split(', ').map((itemStr, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                        <span>{itemStr}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
                   <div className="receipt-divider"></div>
                   {receiptOrder.orderNotes && (
                     <>
@@ -256,7 +271,7 @@ export default function OrderHistoryScreen(): React.JSX.Element {
                   className="place-order-btn"
                   style={{ flex: 1, margin: 0, padding: '10px', fontSize: '13px' }}
                   disabled={isSimulatingPrint}
-                  onClick={handleSimulatePrint}
+                  onClick={handlePrintReceipt}
                 >
                   {isSimulatingPrint ? 'Printing...' : 'Print Ticket'}
                 </button>

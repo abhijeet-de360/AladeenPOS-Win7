@@ -13,11 +13,18 @@ export interface CartItem {
   quantity: number
 }
 
+export interface OrderItemDetail {
+  name: string
+  quantity: number
+  price: number
+}
+
 export interface Order {
   id: string
   rawId?: string
   customer: string
   items: string
+  itemList?: OrderItemDetail[]
   date: string
   amount: number
   status: 'Completed' | 'Pending' | 'Preparing' | 'Ready' | 'OutForDelivery' | 'Rejected'

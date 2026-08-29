@@ -2,11 +2,29 @@ import { Order } from '../types'
 
 export const printThermalReceipt = async (order: Order, _prepMins?: number): Promise<void> => {
   try {
-    const itemsHtml = (order.items || '')
-      .split(', ')
-      .filter(Boolean)
-      .map((it) => `<div style="display:flex; justify-content:space-between; margin-bottom: 3px;"><span>${it}</span></div>`)
-      .join('')
+    let itemsHtml = ''
+    if (order.itemList && order.itemList.length > 0) {
+      itemsHtml = order.itemList
+        .map(
+          (it) => `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 4px;">
+            <span style="flex:1; padding-right: 8px;">${it.quantity}x ${it.name}</span>
+            <span style="font-weight:600; white-space:nowrap;">฿${(it.price * it.quantity).toFixed(2)}</span>
+          </div>`
+        )
+        .join('')
+    } else {
+      itemsHtml = (order.items || '')
+        .split(', ')
+        .filter(Boolean)
+        .map(
+          (it) => `
+          <div style="display:flex; justify-content:space-between; margin-bottom: 3px;">
+            <span>${it}</span>
+          </div>`
+        )
+        .join('')
+    }
 
     const dateStr = order.date || new Date().toLocaleString()
 
@@ -18,35 +36,39 @@ export const printThermalReceipt = async (order: Order, _prepMins?: number): Pro
           <title>Order Receipt - ${order.id}</title>
           <style>
             @page {
-              size: auto;
-              margin: 10mm;
+              size: 80mm auto;
+              margin: 0;
+            }
+            * {
+              box-sizing: border-box;
             }
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-              max-width: 420px;
+              width: 100%;
+              max-width: 76mm;
               margin: 0 auto;
-              padding: 16px;
-              color: #111;
-              font-size: 13px;
-              line-height: 1.4;
+              padding: 4mm 2mm;
+              color: #000;
+              font-size: 13.5px;
+              line-height: 1.35;
             }
             .header {
               text-align: center;
-              margin-bottom: 12px;
+              margin-bottom: 8px;
             }
             .title {
-              font-size: 18px;
-              font-weight: 800;
+              font-size: 19px;
+              font-weight: 900;
               text-transform: uppercase;
               letter-spacing: 0.5px;
             }
             .sub {
               font-size: 12px;
-              color: #444;
+              color: #333;
             }
             .divider {
-              border-top: 1px dashed #666;
-              margin: 10px 0;
+              border-top: 1px dashed #333;
+              margin: 8px 0;
             }
             .row {
               display: flex;
@@ -63,9 +85,9 @@ export const printThermalReceipt = async (order: Order, _prepMins?: number): Pro
             }
             .footer {
               text-align: center;
-              margin-top: 14px;
-              font-size: 12px;
-              color: #444;
+              margin-top: 12px;
+              font-size: 11.5px;
+              color: #333;
             }
           </style>
         </head>
@@ -73,14 +95,15 @@ export const printThermalReceipt = async (order: Order, _prepMins?: number): Pro
           <div class="header">
             <div class="title">ALADEEN RESTAURANT</div>
             <div class="sub">Bangkok, Thailand</div>
-            <div class="sub">Online Order KOT / Receipt</div>
+            <div class="sub">${order.type === 'POS' ? 'POS Receipt' : 'Online Order KOT / Receipt'}</div>
           </div>
 
           <div class="divider"></div>
 
           <div class="row"><span>Ticket No:</span><span class="bold">${order.id}</span></div>
           <div class="row"><span>Date:</span><span>${dateStr}</span></div>
-          <div class="row"><span>Type:</span><span class="bold">${(order.deliveryType || order.type || 'Online').toUpperCase()}</span></div>
+          <div class="row"><span>Type:</span><span class="bold">${(order.deliveryType || order.type || 'POS').toUpperCase()}</span></div>
+          ${order.table ? `<div class="row"><span>Table:</span><span class="bold">${order.table}</span></div>` : ''}
           <div class="row"><span>Customer:</span><span>${order.customer}</span></div>
           ${order.customerPhone ? `<div class="row"><span>Phone:</span><span class="bold">${order.customerPhone}</span></div>` : ''}
 
@@ -94,7 +117,10 @@ export const printThermalReceipt = async (order: Order, _prepMins?: number): Pro
 
           <div class="divider"></div>
 
-          <div class="bold" style="margin-bottom: 4px;">ORDER ITEMS:</div>
+          <div class="bold" style="margin-bottom: 6px; display:flex; justify-content:space-between;">
+            <span>ITEMS:</span>
+            <span>PRICE</span>
+          </div>
           <div>${itemsHtml}</div>
 
           ${order.orderNotes ? `
@@ -124,9 +150,7 @@ export const printThermalReceipt = async (order: Order, _prepMins?: number): Pro
     if (window.api && typeof window.api.printThermalReceipt === 'function') {
       const res: any = await window.api.printThermalReceipt(htmlContent)
       console.log('Electron native thermal print result:', res)
-      if (res && res.success) {
-        alert(`Print Success!\nTicket sent to thermal printer: ${res.deviceName || 'System Printer'}`)
-      } else if (res) {
+      if (res && !res.success) {
         alert(`Print Error!\nTarget Printer: ${res.deviceName || 'Unknown Printer'}\nReason: ${res.reason || res.error || 'Failed to send print job'}`)
       }
       return

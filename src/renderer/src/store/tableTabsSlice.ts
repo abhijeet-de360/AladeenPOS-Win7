@@ -311,6 +311,11 @@ export function checkoutTableTabThunk(tableId: string) {
       id: finalOrderId || '#POS-0001',
       customer: 'Walk-in Client',
       items: tab.cart.map((item) => `${item.quantity}x ${item.product.name}`).join(', '),
+      itemList: tab.cart.map((item) => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.product.price
+      })),
       date: new Date().toISOString().slice(0, 16).replace('T', ' '),
       amount: totalAmount,
       status: 'Completed' as const,

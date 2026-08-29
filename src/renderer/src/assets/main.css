@@ -272,7 +272,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px 0 84px; /* Left padding ensures native macOS window controls (traffic lights) don't overlap brand */
+  padding: 0 24px 0 16px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
   z-index: 20;
   -webkit-app-region: drag;

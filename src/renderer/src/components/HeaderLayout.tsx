@@ -5,7 +5,6 @@ import { logout } from '../store/authSlice'
 import { RootState, AppDispatch } from '../store/store'
 import { markAllAsRead, clearNotifications } from '../store/notificationsSlice'
 import { LogOut, Maximize2, Search, Bell, BellRing, CheckCheck, Trash2, ShoppingBag } from 'lucide-react'
-import logoImg from '../assets/logo.png'
 import VirtualKeyboard from './VirtualKeyboard'
 
 interface HeaderLayoutProps {
@@ -47,9 +46,8 @@ export default function HeaderLayout({
     <div className="home-container">
       {/* Top Foodeology-Style Header Bar */}
       <header className="foodeology-header">
-        {/* Left: Brand Logo */}
+        {/* Left: Brand Name */}
         <div className="foodeology-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          <img src={logoImg} alt="Aladeen Logo" className="foodeology-logo-img" />
           <span className="foodeology-brand-name">Aladeen</span>
         </div>
 

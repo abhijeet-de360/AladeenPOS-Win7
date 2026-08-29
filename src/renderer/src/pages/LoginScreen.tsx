@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from '../store/store'
 import { loginUser } from '../store/authSlice'
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Maximize2, Minimize2 } from 'lucide-react'
 import logoImg from '../assets/logo.png'
+import VirtualKeyboard from '../components/VirtualKeyboard'
 
 export default function LoginScreen() {
   const navigate = useNavigate()
@@ -15,9 +16,43 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false)
+  const [activeField, setActiveField] = useState<'email' | 'password'>('email')
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }
+  }, [])
+
+  const triggerOpenKeyboard = () => {
+    setShowVirtualKeyboard(true)
+    if (window.api && (window.api as any).openVirtualKeyboard) {
+      ;(window.api as any).openVirtualKeyboard()
+    }
+  }
+
+  const handleToggleFullscreen = () => {
+    if (window.api && (window.api as any).toggleFullscreen) {
+      ;(window.api as any).toggleFullscreen()
+      setIsFullscreen((prev) => !prev)
+    } else if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {})
+      setIsFullscreen(false)
+    } else {
+      void document.documentElement.requestFullscreen().catch(() => {})
+      setIsFullscreen(true)
+    }
+  }
 
   const handleLoginSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
+    setShowVirtualKeyboard(false)
     if (!email || !password) {
       setErrorMessage('Please enter both email and password.')
       return
@@ -33,9 +68,44 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="login-container">
+    <div className="login-container" style={{ position: 'relative' }}>
       <div className="window-drag-bar" />
-      <div className="login-card">
+
+      {/* Top right Fullscreen toggle */}
+      <button
+        type="button"
+        className="foodeology-icon-btn"
+        title="Toggle Fullscreen"
+        onClick={handleToggleFullscreen}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          zIndex: 100,
+          background: '#ffffff',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+          border: '1px solid var(--border)',
+          borderRadius: '10px',
+          width: '40px',
+          height: '40px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          color: 'var(--text-main)',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+      </button>
+
+      <div
+        className="login-card"
+        style={{
+          transform: showVirtualKeyboard ? 'translateY(-70px)' : 'translateY(0)',
+          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}
+      >
         <div className="login-header">
           <div className="login-logo" style={{ background: 'transparent', width: 'auto', height: 'auto' }}>
             <img src={logoImg} alt="Aladeen Logo" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
@@ -62,6 +132,14 @@ export default function LoginScreen() {
                 placeholder="cashier@aladeen.com"
                 value={email}
                 onChange={(e): void => setEmail(e.target.value)}
+                onClick={() => {
+                  setActiveField('email')
+                  triggerOpenKeyboard()
+                }}
+                onFocus={() => {
+                  setActiveField('email')
+                  triggerOpenKeyboard()
+                }}
               />
             </div>
           </div>
@@ -78,6 +156,14 @@ export default function LoginScreen() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e): void => setPassword(e.target.value)}
+                onClick={() => {
+                  setActiveField('password')
+                  triggerOpenKeyboard()
+                }}
+                onFocus={() => {
+                  setActiveField('password')
+                  triggerOpenKeyboard()
+                }}
               />
               <button
                 type="button"
@@ -110,6 +196,27 @@ export default function LoginScreen() {
           <span>Security warning: authorized staff only.</span>
         </div>
       </div>
+
+      {/* Docked Virtual Keyboard for Touchscreens */}
+      <VirtualKeyboard
+        isOpen={showVirtualKeyboard}
+        onClose={() => setShowVirtualKeyboard(false)}
+        value={activeField === 'email' ? email : password}
+        onChange={(val) => {
+          if (activeField === 'email') {
+            setEmail(val)
+          } else {
+            setPassword(val)
+          }
+        }}
+        onEnter={() => {
+          if (activeField === 'email') {
+            setActiveField('password')
+          } else {
+            setShowVirtualKeyboard(false)
+          }
+        }}
+      />
     </div>
   )
 }

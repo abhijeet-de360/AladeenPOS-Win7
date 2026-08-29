@@ -332,13 +332,23 @@ export default function OnlineOrdersScreen(): React.JSX.Element {
 
                 <div className="receipt-divider"></div>
 
-                <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '4px' }}>ORDER ITEMS</div>
+                <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>ORDER ITEMS</span>
+                  <span>PRICE</span>
+                </div>
                 <div style={{ fontSize: '10px', whiteSpace: 'pre-wrap' }}>
-                  {receiptOrder.items.split(', ').map((item, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{item}</span>
-                    </div>
-                  ))}
+                  {receiptOrder.itemList && receiptOrder.itemList.length > 0
+                    ? receiptOrder.itemList.map((item, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                          <span style={{ paddingRight: '8px' }}>{item.quantity}x {item.name}</span>
+                          <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>฿{(item.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                      ))
+                    : receiptOrder.items.split(', ').map((item, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                          <span>{item}</span>
+                        </div>
+                      ))}
                 </div>
 
                 <div className="receipt-divider"></div>
