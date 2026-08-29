@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { Printer, Search, ShoppingBag, Globe, CheckCircle2, Clock, Calendar } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Printer, Search, ShoppingBag, Globe, CheckCircle2, Clock, Calendar, Edit2 } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import HeaderLayout from '../components/HeaderLayout'
 import VirtualKeyboard from '../components/VirtualKeyboard'
 import { Order } from '../types'
 import { RootState, AppDispatch } from '../store/store'
 import { fetchOrderHistoryThunk } from '../store/orderHistorySlice'
+import { loadOrderForEdit } from '../store/tableTabsSlice'
 import { printThermalReceipt } from '../utils/printReceipt'
 
 export default function OrderHistoryScreen(): React.JSX.Element {
+  const navigate = useNavigate()
   const dispatch = useDispatch<AppDispatch>()
   const { historyOrders, totalRevenue, posCount, onlineCount } = useSelector((state: RootState) => state.orderHistory)
 
@@ -21,6 +24,43 @@ export default function OrderHistoryScreen(): React.JSX.Element {
   useEffect(() => {
     dispatch(fetchOrderHistoryThunk(filterType, searchQuery, true))
   }, [dispatch, filterType, searchQuery])
+
+  const handleEditPosOrder = (order: Order): void => {
+    if (order.type !== 'POS') return
+
+    // Convert items if itemList is present or parse item strings
+    let itemsToLoad: { name: string; quantity: number; price: number }[] = []
+    if (order.itemList && order.itemList.length > 0) {
+      itemsToLoad = order.itemList.map((it) => ({
+        name: it.name,
+        quantity: it.quantity,
+        price: it.price
+      }))
+    } else {
+      itemsToLoad = (order.items || '')
+        .split(', ')
+        .filter(Boolean)
+        .map((str) => {
+          const match = str.match(/^(\d+)x\s+(.+)$/)
+          if (match) {
+            return { quantity: parseInt(match[1], 10), name: match[2], price: 0 }
+          }
+          return { quantity: 1, name: str, price: 0 }
+        })
+    }
+
+    dispatch(
+      loadOrderForEdit({
+        tableId: order.table || 'Takeaway',
+        orderId: order.id,
+        mongoId: order.rawId,
+        items: itemsToLoad,
+        discountPercentage: order.discount || 0
+      })
+    )
+
+    navigate('/')
+  }
 
   const handlePrintReceipt = async (): Promise<void> => {
     if (!receiptOrder) return
@@ -132,7 +172,7 @@ export default function OrderHistoryScreen(): React.JSX.Element {
                   <th>Timestamp</th>
                   <th>Amount Total</th>
                   <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>Receipt Action</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,14 +207,26 @@ export default function OrderHistoryScreen(): React.JSX.Element {
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <button
-                        className="print-action-btn"
-                        title="Re-print Thermal Receipt"
-                        onClick={(): void => setReceiptOrder(o)}
-                      >
-                        <Printer size={15} />
-                        <span>Print</span>
-                      </button>
+                      <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                        {o.type === 'POS' && (
+                          <button
+                            className="edit-action-btn"
+                            title="Edit / Modify POS Order"
+                            onClick={(): void => handleEditPosOrder(o)}
+                          >
+                            <Edit2 size={14} />
+                            <span>Edit</span>
+                          </button>
+                        )}
+                        <button
+                          className="print-action-btn"
+                          title="Re-print Thermal Receipt"
+                          onClick={(): void => setReceiptOrder(o)}
+                        >
+                          <Printer size={14} />
+                          <span>Print</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

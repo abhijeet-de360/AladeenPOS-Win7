@@ -137,6 +137,41 @@ export const tableTabsSlice = createSlice({
           }))
         }
       })
+    },
+    loadOrderForEdit(
+      state,
+      action: PayloadAction<{
+        tableId: string
+        orderId: string
+        mongoId?: string
+        items: { name: string; quantity: number; price: number; productId?: string }[]
+        discountPercentage?: number
+        paymentMethod?: 'Cash' | 'Online'
+      }>
+    ) {
+      const { tableId, orderId, mongoId, items, discountPercentage, paymentMethod } = action.payload
+      const targetTable = tableId || 'Takeaway'
+      if (!state.tabs[targetTable]) {
+        state.tabs[targetTable] = createDefaultTab(targetTable)
+      }
+      const tab = state.tabs[targetTable]
+      tab.orderId = orderId
+      if (mongoId) tab.mongoId = mongoId
+      tab.discountPercentage = discountPercentage || 0
+      tab.paymentMethod = paymentMethod || 'Cash'
+      tab.status = 'occupied'
+      tab.cart = (items || []).map((item) => ({
+        product: {
+          id: item.productId || String(Math.random()),
+          code: '',
+          name: item.name,
+          price: item.price,
+          category: 'food' as const,
+          stock: 999
+        },
+        quantity: item.quantity
+      }))
+      state.activeTableId = targetTable
     }
   }
 })
@@ -150,7 +185,8 @@ export const {
   setTabPaymentMethod,
   setTabOrderId,
   clearTab,
-  syncPendingOrders
+  syncPendingOrders,
+  loadOrderForEdit
 } = tableTabsSlice.actions
 
 export default tableTabsSlice.reducer
@@ -164,9 +200,12 @@ export function saveTableTabThunk(tableId: string) {
 
     const targetKey = tab.mongoId || tab.orderId
 
+    console.log(`[POS TAB DEBUG] saveTableTabThunk -> tableId: ${tableId}, targetKey: ${targetKey}, cartLen: ${tab.cart.length}`);
+
     if (tab.cart.length === 0) {
       if (targetKey) {
         try {
+          console.log(`[POS TAB DEBUG] Emptying & cancelling tab in DB for targetKey: ${targetKey}`);
           await apiService.updatePosOrder(targetKey, {
             items: [],
             subtotal: 0,
@@ -210,16 +249,19 @@ export function saveTableTabThunk(tableId: string) {
 
     try {
       if (targetKey) {
+        console.log(`[POS TAB DEBUG] Updating existing draft order with targetKey: ${targetKey}`);
         await apiService.updatePosOrder(targetKey, payload)
       } else {
+        console.log(`[POS TAB DEBUG] Creating new draft order for table: ${tableId}`);
         const res = await apiService.createPosOrder(payload)
         if (res.data && res.data.data) {
           const createdMongoId = res.data.data._id
           const createdOrderId = res.data.data.orderId
+          console.log(`[POS TAB DEBUG] Received created draft -> mongoId: ${createdMongoId}, orderId: ${createdOrderId}`);
           dispatch(
             setTabOrderId({
               tableId,
-              orderId: createdOrderId || createdMongoId,
+              orderId: createdOrderId || '',
               mongoId: createdMongoId
             })
           )
