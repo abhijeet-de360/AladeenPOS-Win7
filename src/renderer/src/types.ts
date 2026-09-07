@@ -37,4 +37,10 @@ export interface Order {
   orderNotes?: string
   table?: string
   discount?: number
+  subtotal?: number
+  discountAmount?: number
+  taxAmount?: number
+  taxPercentage?: number
+  serviceFee?: number
+  servicePercentage?: number
 }

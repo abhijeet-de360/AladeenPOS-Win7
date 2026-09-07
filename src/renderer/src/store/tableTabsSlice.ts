@@ -6,6 +6,7 @@ export interface TableTab {
   tableId: string
   cart: CartItem[]
   discountPercentage: number
+  servicePercentage: number
   paymentMethod: 'Cash' | 'Online'
   orderId?: string
   mongoId?: string
@@ -15,12 +16,14 @@ export interface TableTab {
 export interface TableTabsState {
   activeTableId: string
   tabs: Record<string, TableTab>
+  posVatPercentage: number
 }
 
 const createDefaultTab = (tableId: string): TableTab => ({
   tableId,
   cart: [],
   discountPercentage: 0,
+  servicePercentage: 0,
   paymentMethod: 'Cash',
   status: 'empty'
 })
@@ -35,7 +38,8 @@ for (let i = 1; i <= 50; i++) {
 
 const initialState: TableTabsState = {
   activeTableId: 'Takeaway',
-  tabs: initialTabs
+  tabs: initialTabs,
+  posVatPercentage: 7
 }
 
 export const tableTabsSlice = createSlice({
@@ -98,6 +102,12 @@ export const tableTabsSlice = createSlice({
         state.tabs[tableId].discountPercentage = discountPercentage
       }
     },
+    setTabServicePercentage(state, action: PayloadAction<{ tableId: string; servicePercentage: number }>) {
+      const { tableId, servicePercentage } = action.payload
+      if (state.tabs[tableId]) {
+        state.tabs[tableId].servicePercentage = servicePercentage
+      }
+    },
     setTabPaymentMethod(state, action: PayloadAction<{ tableId: string; paymentMethod: 'Cash' | 'Online' }>) {
       const { tableId, paymentMethod } = action.payload
       if (state.tabs[tableId]) {
@@ -124,6 +134,7 @@ export const tableTabsSlice = createSlice({
           tab.mongoId = order._id
           tab.orderId = order.orderId || order._id
           tab.discountPercentage = order.discountPercentage || 0
+          tab.servicePercentage = order.servicePercentage || 0
           tab.paymentMethod = order.paymentMethod || 'Cash'
           tab.status = 'occupied'
           tab.cart = (order.items || []).map((item: any) => ({
@@ -146,10 +157,11 @@ export const tableTabsSlice = createSlice({
         mongoId?: string
         items: { name: string; quantity: number; price: number; productId?: string }[]
         discountPercentage?: number
+        servicePercentage?: number
         paymentMethod?: 'Cash' | 'Online'
       }>
     ) {
-      const { tableId, orderId, mongoId, items, discountPercentage, paymentMethod } = action.payload
+      const { tableId, orderId, mongoId, items, discountPercentage, servicePercentage, paymentMethod } = action.payload
       const targetTable = tableId || 'Takeaway'
       if (!state.tabs[targetTable]) {
         state.tabs[targetTable] = createDefaultTab(targetTable)
@@ -158,6 +170,7 @@ export const tableTabsSlice = createSlice({
       tab.orderId = orderId
       if (mongoId) tab.mongoId = mongoId
       tab.discountPercentage = discountPercentage || 0
+      tab.servicePercentage = servicePercentage || 0
       tab.paymentMethod = paymentMethod || 'Cash'
       tab.status = 'occupied'
       tab.cart = (items || []).map((item) => ({
@@ -172,6 +185,9 @@ export const tableTabsSlice = createSlice({
         quantity: item.quantity
       }))
       state.activeTableId = targetTable
+    },
+    setPosVatPercentage(state, action: PayloadAction<number>) {
+      state.posVatPercentage = action.payload
     }
   }
 })
@@ -182,11 +198,13 @@ export const {
   updateTabCartQty,
   removeFromTabCart,
   setTabDiscount,
+  setTabServicePercentage,
   setTabPaymentMethod,
   setTabOrderId,
   clearTab,
   syncPendingOrders,
-  loadOrderForEdit
+  loadOrderForEdit,
+  setPosVatPercentage
 } = tableTabsSlice.actions
 
 export default tableTabsSlice.reducer
@@ -224,9 +242,11 @@ export function saveTableTabThunk(tableId: string) {
     const subtotal = tab.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
     const discountAmount = subtotal * (tab.discountPercentage / 100)
     const subtotalAfterDiscount = subtotal - discountAmount
-    const taxPercentage = 7
-    const taxAmount = subtotalAfterDiscount * (taxPercentage / 100)
-    const totalAmount = subtotalAfterDiscount + taxAmount
+    const serviceFee = subtotalAfterDiscount * ((tab.servicePercentage || 0) / 100)
+    const subtotalAfterService = subtotalAfterDiscount + serviceFee
+    const taxPercentage = typeof tableTabs.posVatPercentage === 'number' ? tableTabs.posVatPercentage : 7
+    const taxAmount = subtotalAfterService * (taxPercentage / 100)
+    const totalAmount = subtotalAfterService + taxAmount
 
     const payload = {
       customer: 'Walk-in Client',
@@ -240,6 +260,8 @@ export function saveTableTabThunk(tableId: string) {
       subtotal,
       discountPercentage: tab.discountPercentage,
       discountAmount,
+      servicePercentage: tab.servicePercentage || 0,
+      serviceFee,
       taxPercentage,
       taxAmount,
       totalAmount,
@@ -285,6 +307,7 @@ export function clearTableTabThunk(tableId: string) {
           items: [],
           subtotal: 0,
           discountAmount: 0,
+          serviceFee: 0,
           taxAmount: 0,
           totalAmount: 0,
           status: 'Cancelled'
@@ -307,9 +330,11 @@ export function checkoutTableTabThunk(tableId: string) {
     const subtotal = tab.cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
     const discountAmount = subtotal * (tab.discountPercentage / 100)
     const subtotalAfterDiscount = subtotal - discountAmount
-    const taxPercentage = 7
-    const taxAmount = subtotalAfterDiscount * (taxPercentage / 100)
-    const totalAmount = subtotalAfterDiscount + taxAmount
+    const serviceFee = subtotalAfterDiscount * ((tab.servicePercentage || 0) / 100)
+    const subtotalAfterService = subtotalAfterDiscount + serviceFee
+    const taxPercentage = typeof tableTabs.posVatPercentage === 'number' ? tableTabs.posVatPercentage : 7
+    const taxAmount = subtotalAfterService * (taxPercentage / 100)
+    const totalAmount = subtotalAfterService + taxAmount
 
     let finalOrderId = tab.orderId
 
@@ -326,6 +351,8 @@ export function checkoutTableTabThunk(tableId: string) {
       subtotal,
       discountPercentage: tab.discountPercentage,
       discountAmount,
+      servicePercentage: tab.servicePercentage || 0,
+      serviceFee,
       taxPercentage,
       taxAmount,
       totalAmount,
@@ -337,7 +364,10 @@ export function checkoutTableTabThunk(tableId: string) {
 
     try {
       if (targetKey) {
-        await apiService.updatePosOrder(targetKey, payload)
+        const res = await apiService.updatePosOrder(targetKey, payload)
+        if (res.data && res.data.data && res.data.data.orderId) {
+          finalOrderId = res.data.data.orderId
+        }
       } else {
         const res = await apiService.createPosOrder(payload)
         if (res.data && res.data.data && res.data.data.orderId) {
@@ -360,10 +390,16 @@ export function checkoutTableTabThunk(tableId: string) {
       })),
       date: new Date().toISOString().slice(0, 16).replace('T', ' '),
       amount: totalAmount,
+      subtotal,
+      discount: tab.discountPercentage,
+      discountAmount,
+      servicePercentage: tab.servicePercentage || 0,
+      serviceFee,
+      taxAmount,
+      taxPercentage,
       status: 'Completed' as const,
       type: 'POS' as const,
-      table: tableId,
-      discount: tab.discountPercentage
+      table: tableId
     }
   }
 }

@@ -1,8 +1,12 @@
 import axios from 'axios';
 
-export const rootUrl = 'https://server.aladeenbangkok.com/api/v1/';
-export const assetUrl = 'https://server.aladeenbangkok.com';
-export const socketUrl = 'https://server.aladeenbangkok.com';
+// export const rootUrl = 'https://server.aladeenbangkok.com/api/v1/';
+// export const assetUrl = 'https://server.aladeenbangkok.com';
+// export const socketUrl = 'https://server.aladeenbangkok.com';
+
+export const rootUrl = 'http://localhost:7120/api/v1/';
+export const assetUrl = 'http://localhost:7120';
+export const socketUrl = 'http://localhost:7120';
 
 const authURL = rootUrl + 'admin';
 const posMenuURL = rootUrl + 'pos-menu';
@@ -10,6 +14,7 @@ const posCategoryURL = rootUrl + 'pos-category';
 const onlineOrdersURL = rootUrl + 'cart/online-orders';
 const posOrdersURL = rootUrl + 'pos-orders';
 const orderHistoryURL = rootUrl + 'order-history';
+const settingsURL = rootUrl + 'settings';
 
 const authHeader = () => {
   const token = localStorage.getItem('pos_token');
@@ -73,6 +78,12 @@ async function getOrderHistory(type = 'All', keyword = '', todayOnly = true) {
   });
 }
 
+async function getSettings() {
+  return await axios.get(settingsURL, {
+    headers: authHeader()
+  });
+}
+
 export const apiService = {
   loginAdmin,
   getPosMenuList,
@@ -82,5 +93,6 @@ export const apiService = {
   createPosOrder,
   getPosOrders,
   updatePosOrder,
-  getOrderHistory
+  getOrderHistory,
+  getSettings
 };

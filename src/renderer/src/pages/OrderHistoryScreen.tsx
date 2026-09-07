@@ -13,7 +13,7 @@ import { printThermalReceipt } from '../utils/printReceipt'
 export default function OrderHistoryScreen(): React.JSX.Element {
   const navigate = useNavigate()
   const dispatch = useDispatch<AppDispatch>()
-  const { historyOrders, totalRevenue, posCount, onlineCount } = useSelector((state: RootState) => state.orderHistory)
+  const { historyOrders, totalOrders, totalRevenue, posCount, onlineCount } = useSelector((state: RootState) => state.orderHistory)
 
   const [filterType, setFilterType] = useState<'All' | 'POS' | 'Online'>('All')
   const [searchQuery, setSearchQuery] = useState('')
@@ -112,7 +112,7 @@ export default function OrderHistoryScreen(): React.JSX.Element {
                 className={`history-filter-btn ${filterType === 'All' ? 'active' : ''}`}
                 onClick={(): void => setFilterType('All')}
               >
-                All Orders ({historyOrders.length})
+                All Orders ({totalOrders})
               </button>
               <button
                 className={`history-filter-btn ${filterType === 'POS' ? 'active' : ''}`}

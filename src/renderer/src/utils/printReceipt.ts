@@ -1,4 +1,5 @@
 import { Order } from '../types'
+import { store } from '../store/store'
 
 export const printThermalReceipt = async (order: Order, _prepMins?: number): Promise<void> => {
   try {
@@ -100,7 +101,7 @@ export const printThermalReceipt = async (order: Order, _prepMins?: number): Pro
 
           <div class="divider"></div>
 
-          <div class="row"><span>Ticket No:</span><span class="bold">${order.id}</span></div>
+          <div class="row"><span>Order ID:</span><span class="bold">${order.id}</span></div>
           <div class="row"><span>Date:</span><span>${dateStr}</span></div>
           <div class="row"><span>Type:</span><span class="bold">${(order.deliveryType || order.type || 'POS').toUpperCase()}</span></div>
           ${order.table ? `<div class="row"><span>Table:</span><span class="bold">${order.table}</span></div>` : ''}
@@ -131,6 +132,44 @@ export const printThermalReceipt = async (order: Order, _prepMins?: number): Pro
 
           <div class="divider"></div>
 
+          ${(() => {
+            const sub = order.subtotal !== undefined
+              ? order.subtotal
+              : (order.itemList && order.itemList.length > 0
+                ? order.itemList.reduce((sum, item) => sum + item.price * item.quantity, 0)
+                : order.amount)
+            const disc = order.discountAmount !== undefined
+              ? order.discountAmount
+              : ((order.discount || 0) > 0 ? (sub * (order.discount || 0)) / 100 : 0)
+            const subAfterDisc = sub - disc
+            const servicePct = order.servicePercentage || 0
+            const service = order.serviceFee !== undefined
+              ? order.serviceFee
+              : (servicePct > 0 ? (subAfterDisc * servicePct) / 100 : 0)
+            const subAfterService = subAfterDisc + service
+            const taxPct =
+              order.taxPercentage !== undefined
+                ? order.taxPercentage
+                : (() => {
+                    const state = store.getState()
+                    const posVat = state.tableTabs?.posVatPercentage
+                    return typeof posVat === 'number' ? posVat : 7
+                  })()
+
+            const tax = order.taxAmount !== undefined
+              ? order.taxAmount
+              : (subAfterService * (taxPct / 100))
+
+            return `
+              <div class="row"><span>Sub Total:</span><span>฿${sub.toFixed(2)}</span></div>
+              ${disc > 0 ? `<div class="row"><span>Discount (${order.discount}%):</span><span>-฿${disc.toFixed(2)}</span></div>` : ''}
+              ${service > 0 ? `<div class="row"><span>Service Fee${servicePct > 0 ? ` (${servicePct}%)` : ''}:</span><span>+฿${service.toFixed(2)}</span></div>` : ''}
+              <div class="row"><span>Tax / VAT (${taxPct}%):</span><span>฿${tax.toFixed(2)}</span></div>
+            `
+          })()}
+
+          <div class="divider"></div>
+
           <div class="row bold" style="font-size: 13px;">
             <span>TOTAL:</span>
             <span>฿${Number(order.amount).toFixed(2)}</span>
@@ -139,8 +178,7 @@ export const printThermalReceipt = async (order: Order, _prepMins?: number): Pro
           <div class="divider"></div>
 
           <div class="footer">
-            <div>*** Order Confirmed & In Kitchen ***</div>
-            <div>Thank You!</div>
+            <div style="font-weight: 600; font-size: 13px; margin-top: 4px;">Thank You, Visit Again!</div>
           </div>
         </body>
       </html>

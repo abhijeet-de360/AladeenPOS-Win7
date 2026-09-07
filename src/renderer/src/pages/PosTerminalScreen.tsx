@@ -7,40 +7,57 @@ import {
   updateTabCartQty,
   removeFromTabCart,
   setTabDiscount,
+  setTabServicePercentage,
   setTabPaymentMethod,
   clearTableTabThunk,
   saveTableTabThunk,
   checkoutTableTabThunk,
   fetchAndSyncPendingPosOrdersThunk,
-  TableTab
+  TableTab,
+  setPosVatPercentage
 } from '../store/tableTabsSlice'
-import { ShoppingBag, Plus, Minus, Trash2, Utensils, Clock, Coins, QrCode, Percent } from 'lucide-react'
+import { ShoppingBag, Plus, Minus, Trash2, Utensils, Clock, Coins, QrCode, Percent, HandCoins } from 'lucide-react'
 import HeaderLayout from '../components/HeaderLayout'
 import { Product, Order } from '../types'
 import { printThermalReceipt } from '../utils/printReceipt'
+import { apiService } from '../services/api_service'
 
 export default function PosTerminalScreen(): React.JSX.Element {
   const dispatch = useDispatch<AppDispatch>()
   const { posMenuList = [] } = useSelector((state: RootState) => state.posMenu)
   const { posCategoryList = [] } = useSelector((state: RootState) => state.posCategory)
-  const { activeTableId, tabs } = useSelector((state: RootState) => state.tableTabs)
+  const { activeTableId, tabs, posVatPercentage = 7 } = useSelector((state: RootState) => state.tableTabs)
 
   useEffect(() => {
     dispatch(fetchAndSyncPendingPosOrdersThunk())
+    apiService.getSettings()
+      .then((res) => {
+        if (res.data) {
+          const posVat = res.data.posVat || res.data.vat
+          if (posVat && posVat.enabled !== false) {
+            dispatch(setPosVatPercentage(typeof posVat.value === 'number' ? posVat.value : 7))
+          } else if (posVat && posVat.enabled === false) {
+            dispatch(setPosVatPercentage(0))
+          }
+        }
+      })
+      .catch((err) => console.log('Could not fetch settings in POS:', err))
   }, [dispatch])
 
   const activeTab: TableTab = tabs[activeTableId] || {
     tableId: activeTableId,
     cart: [],
     discountPercentage: 0,
+    servicePercentage: 0,
     paymentMethod: 'Cash',
     status: 'empty'
   }
 
   const cart = activeTab.cart
-  const discountPercentage = activeTab.discountPercentage
+  const discountPercentage = activeTab.discountPercentage || 0
+  const servicePercentage = activeTab.servicePercentage || 0
   const paymentMethod = activeTab.paymentMethod
-  const taxPercentage = 7
+  const taxPercentage = typeof posVatPercentage === 'number' ? posVatPercentage : 7
 
   const [posSearchQuery, setPosSearchQuery] = useState('')
   const [posCategory, setPosCategory] = useState<string>('all')
@@ -117,8 +134,10 @@ export default function PosTerminalScreen(): React.JSX.Element {
 
   const cartDiscountAmount = cartSubtotal * (discountPercentage / 100)
   const cartSubtotalAfterDiscount = cartSubtotal - cartDiscountAmount
-  const cartTax = cartSubtotalAfterDiscount * (taxPercentage / 100)
-  const cartTotal = cartSubtotalAfterDiscount + cartTax
+  const cartServiceFee = cartSubtotalAfterDiscount * (servicePercentage / 100)
+  const cartSubtotalAfterService = cartSubtotalAfterDiscount + cartServiceFee
+  const cartTax = cartSubtotalAfterService * (taxPercentage / 100)
+  const cartTotal = cartSubtotalAfterService + cartTax
 
   const handlePOSCheckout = async (): Promise<void> => {
     if (cart.length === 0) return
@@ -126,6 +145,8 @@ export default function PosTerminalScreen(): React.JSX.Element {
       const resultOrder = await dispatch(checkoutTableTabThunk(activeTableId))
       if (resultOrder) {
         setReceiptOrder(resultOrder)
+        // Automatically print thermal receipt on checkout
+        printThermalReceipt(resultOrder)
       }
     } catch (err) {
       console.error('Checkout error:', err)
@@ -398,6 +419,105 @@ export default function PosTerminalScreen(): React.JSX.Element {
               </span>
             </div>
 
+            {/* Service Charge Row (Text Box -> % Service -> Amount) */}
+            <div className="pos-summary-row" style={{ alignItems: 'center', marginTop: '4px', marginBottom: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <button
+                    type="button"
+                    onClick={(): void => {
+                      const current = servicePercentage || 0
+                      const newVal = Math.max(0, current - 1)
+                      dispatch(setTabServicePercentage({ tableId: activeTableId, servicePercentage: newVal }))
+                      triggerAutoSave(activeTableId)
+                    }}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '6px',
+                      border: '1px solid #d1d5db',
+                      background: 'var(--bg-secondary, #f3f4f6)',
+                      color: 'var(--text-primary, #111827)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                    title="Decrease service charge"
+                  >
+                    <Minus size={12} />
+                  </button>
+
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="0"
+                    data-no-virtual-keyboard="true"
+                    style={{
+                      width: '40px',
+                      padding: '3px 2px',
+                      borderRadius: '6px',
+                      border: '1px solid #d1d5db',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                      outline: 'none'
+                    }}
+                    value={servicePercentage || ''}
+                    onChange={(e): void => {
+                      const rawVal = e.target.value
+                      const parsed = parseInt(rawVal, 10)
+                      const val = isNaN(parsed) ? 0 : Math.min(100, Math.max(0, parsed))
+                      dispatch(setTabServicePercentage({ tableId: activeTableId, servicePercentage: val }))
+                      triggerAutoSave(activeTableId)
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={(): void => {
+                      const current = servicePercentage || 0
+                      const newVal = Math.min(100, current + 1)
+                      dispatch(setTabServicePercentage({ tableId: activeTableId, servicePercentage: newVal }))
+                      triggerAutoSave(activeTableId)
+                    }}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '6px',
+                      border: '1px solid #d1d5db',
+                      background: 'var(--bg-secondary, #f3f4f6)',
+                      color: 'var(--text-primary, #111827)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                    title="Increase service charge"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <HandCoins size={13} color="var(--primary)" />
+                  Service Fee
+                </span>
+              </div>
+
+              <span>
+                {servicePercentage > 0 ? (
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    +฿{cartServiceFee.toFixed(2)}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>+฿0.00</span>
+                )}
+              </span>
+            </div>
+
             <div className="pos-summary-row" style={{ alignItems: 'center' }}>
               <span>Tax {taxPercentage}% (VAT Included)</span>
               <span>฿{cartTax.toFixed(2)}</span>
@@ -465,7 +585,7 @@ export default function PosTerminalScreen(): React.JSX.Element {
               </div>
               <div className="receipt-body">
                 <div>Date: {receiptOrder.date}</div>
-                <div>Ticket: <strong>{receiptOrder.id}</strong></div>
+                <div>Order ID: <strong>{receiptOrder.id}</strong></div>
                 <div>Type: {receiptOrder.type} Sale</div>
                 {receiptOrder.type === 'POS' && <div>Table: {receiptOrder.table || 'Takeaway'}</div>}
                 <div>Client: {receiptOrder.customer}</div>
@@ -479,35 +599,97 @@ export default function PosTerminalScreen(): React.JSX.Element {
                 <div style={{ fontSize: '10px', whiteSpace: 'pre-wrap' }}>
                   {receiptOrder.itemList && receiptOrder.itemList.length > 0
                     ? receiptOrder.itemList.map((item, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                          <span style={{ paddingRight: '8px' }}>{item.quantity}x {item.name}</span>
-                          <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>฿{(item.price * item.quantity).toFixed(2)}</span>
-                        </div>
-                      ))
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                        <span style={{ paddingRight: '8px' }}>{item.quantity}x {item.name}</span>
+                        <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>฿{(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))
                     : receiptOrder.items.split(', ').map((item, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                          <span>{item}</span>
-                        </div>
-                      ))}
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                        <span>{item}</span>
+                      </div>
+                    ))}
                 </div>
 
                 <div className="receipt-divider"></div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                {(() => {
+                  const modalSubtotal =
+                    receiptOrder.subtotal !== undefined
+                      ? receiptOrder.subtotal
+                      : receiptOrder.itemList && receiptOrder.itemList.length > 0
+                        ? receiptOrder.itemList.reduce((sum, item) => sum + item.price * item.quantity, 0)
+                        : receiptOrder.amount
+
+                  const discountPct = receiptOrder.discount || 0
+                  const modalDiscountAmt =
+                    receiptOrder.discountAmount !== undefined
+                      ? receiptOrder.discountAmount
+                      : (modalSubtotal * discountPct) / 100
+
+                  const subAfterDiscount = modalSubtotal - modalDiscountAmt
+                  const servicePct = receiptOrder.servicePercentage || 0
+                  const modalServiceFee =
+                    receiptOrder.serviceFee !== undefined
+                      ? receiptOrder.serviceFee
+                      : (subAfterDiscount * servicePct) / 100
+
+                  const subAfterService = subAfterDiscount + modalServiceFee
+                  const modalTaxPct =
+                    receiptOrder.taxPercentage !== undefined
+                      ? receiptOrder.taxPercentage
+                      : taxPercentage
+                  const modalTaxAmt =
+                    receiptOrder.taxAmount !== undefined
+                      ? receiptOrder.taxAmount
+                      : subAfterService * (modalTaxPct / 100)
+
+                  return (
+                    <div style={{ fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#4b5563' }}>Sub Total:</span>
+                        <span style={{ fontWeight: 600 }}>฿{modalSubtotal.toFixed(2)}</span>
+                      </div>
+
+                      {modalDiscountAmt > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Discount ({discountPct}%):</span>
+                          <span style={{ fontWeight: 600 }}>-฿{modalDiscountAmt.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {modalServiceFee > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: '#4b5563' }}>Service Fee{servicePct > 0 ? ` (${servicePct}%)` : ''}:</span>
+                          <span style={{ fontWeight: 600 }}>+฿{modalServiceFee.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#4b5563' }}>Tax / Service ({modalTaxPct}% VAT):</span>
+                        <span style={{ fontWeight: 600 }}>฿{modalTaxAmt.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                <div className="receipt-divider"></div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '11px' }}>
                   <span>Total Paid:</span>
-                  <span>฿{receiptOrder.amount.toFixed(2)}</span>
+                  <span style={{ color: '#111827' }}>฿{receiptOrder.amount.toFixed(2)}</span>
                 </div>
 
                 <div className="receipt-divider" style={{ marginBottom: 0 }}></div>
-                <div style={{ textAlign: 'center', fontSize: '10px', marginTop: '8px' }}>
-                  Thank you for your purchase!
+                <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: 600, marginTop: '8px' }}>
+                  Thank You, Visit Again!
                 </div>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button className="btn-primary" style={{ flex: 1 }} disabled={isSimulatingPrint} onClick={handleSimulatePrint}>
-                {isSimulatingPrint ? 'Printing...' : 'Print Ticket'}
+                {isSimulatingPrint ? 'Reprinting...' : 'Reprint'}
               </button>
               <button className="logout-btn" style={{ flex: 1 }} onClick={(): void => setReceiptOrder(null)}>
                 Close Window
