@@ -1,12 +1,12 @@
 import axios from 'axios';
 
-// export const rootUrl = 'https://server.aladeenbangkok.com/api/v1/';
-// export const assetUrl = 'https://server.aladeenbangkok.com';
-// export const socketUrl = 'https://server.aladeenbangkok.com';
+export const rootUrl = 'https://server.aladeenbangkok.com/api/v1/';
+export const assetUrl = 'https://server.aladeenbangkok.com';
+export const socketUrl = 'https://server.aladeenbangkok.com';
 
-export const rootUrl = 'http://localhost:7120/api/v1/';
-export const assetUrl = 'http://localhost:7120';
-export const socketUrl = 'http://localhost:7120';
+// export const rootUrl = 'http://localhost:7120/api/v1/';
+// export const assetUrl = 'http://localhost:7120';
+// export const socketUrl = 'http://localhost:7120';
 
 const authURL = rootUrl + 'admin';
 const posMenuURL = rootUrl + 'pos-menu';
