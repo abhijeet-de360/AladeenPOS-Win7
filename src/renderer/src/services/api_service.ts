@@ -84,6 +84,12 @@ async function getSettings() {
   });
 }
 
+async function updateSettings(data: any) {
+  return await axios.patch(settingsURL, data, {
+    headers: authHeader()
+  });
+}
+
 export const apiService = {
   loginAdmin,
   getPosMenuList,
@@ -94,5 +100,6 @@ export const apiService = {
   getPosOrders,
   updatePosOrder,
   getOrderHistory,
-  getSettings
+  getSettings,
+  updateSettings
 };

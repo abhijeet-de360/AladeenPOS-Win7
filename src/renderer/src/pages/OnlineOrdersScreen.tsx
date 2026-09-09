@@ -112,9 +112,9 @@ export default function OnlineOrdersScreen(): React.JSX.Element {
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '4px 10px', borderRadius: '12px', background: isConnected ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)', color: isConnected ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 12px', borderRadius: '20px', background: isConnected ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)', color: isConnected ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
             {isConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
-            <span>{isConnected ? 'Real-Time Sync Active' : 'Offline Mode'}</span>
+            <span>{isConnected ? 'Sync Active' : 'Offline'}</span>
           </div>
         </div>
 

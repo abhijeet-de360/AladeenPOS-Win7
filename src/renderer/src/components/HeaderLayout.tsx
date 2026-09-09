@@ -4,8 +4,9 @@ import { useDispatch, useSelector } from 'react-redux'
 import { logout } from '../store/authSlice'
 import { RootState, AppDispatch } from '../store/store'
 import { markAllAsRead, clearNotifications } from '../store/notificationsSlice'
-import { LogOut, Maximize2, Search, Bell, BellRing, CheckCheck, Trash2, ShoppingBag } from 'lucide-react'
+import { LogOut, Maximize2, Search, Bell, BellRing, CheckCheck, Trash2, ShoppingBag, Clock, Power } from 'lucide-react'
 import VirtualKeyboard from './VirtualKeyboard'
+import { apiService } from '../services/api_service'
 
 interface HeaderLayoutProps {
   children: React.ReactNode
@@ -29,6 +30,41 @@ export default function HeaderLayout({
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showNotifDropdown, setShowNotifDropdown] = useState(false)
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false)
+
+  // Store Open / Close Status Control
+  const [controlMode, setControlMode] = useState<'admin' | 'pos'>('admin')
+  const [posStoreStatus, setPosStoreStatus] = useState<'open' | 'closed'>('open')
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false)
+
+  const fetchStoreSettings = async (): Promise<void> => {
+    try {
+      const res = await apiService.getSettings()
+      if (res.data) {
+        if (res.data.controlMode) setControlMode(res.data.controlMode)
+        if (res.data.posStoreStatus) setPosStoreStatus(res.data.posStoreStatus)
+      }
+    } catch (err) {
+      console.error('Failed to fetch settings in HeaderLayout:', err)
+    }
+  }
+
+  React.useEffect(() => {
+    void fetchStoreSettings()
+  }, [])
+
+  const handleToggleStoreStatus = async (): Promise<void> => {
+    if (controlMode !== 'pos' || isTogglingStatus) return
+    const nextStatus = posStoreStatus === 'open' ? 'closed' : 'open'
+    setIsTogglingStatus(true)
+    try {
+      await apiService.updateSettings({ posStoreStatus: nextStatus })
+      setPosStoreStatus(nextStatus)
+    } catch (err) {
+      console.error('Failed to update store status:', err)
+    } finally {
+      setIsTogglingStatus(false)
+    }
+  }
 
   const handleLogoutClick = (): void => {
     setShowLogoutModal(true)
@@ -88,6 +124,65 @@ export default function HeaderLayout({
 
         {/* Navigation tabs & Action Buttons */}
         <div className="foodeology-header-actions">
+          {/* Store Open / Close Status Control (Only shown on Online Orders page, before navigation tabs) */}
+          {activePath === '/online-orders' && (
+            controlMode === 'pos' ? (
+              <button
+                onClick={handleToggleStoreStatus}
+                disabled={isTogglingStatus}
+                title="Click to toggle mobile app orders open / closed"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: posStoreStatus === 'open' ? '1px solid #16a34a' : '1px solid #dc2626',
+                  background: posStoreStatus === 'open' ? '#dcfce7' : '#fee2e2',
+                  color: posStoreStatus === 'open' ? '#15803d' : '#b91c1c',
+                  cursor: isTogglingStatus ? 'wait' : 'pointer',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  transition: 'all 0.2s ease',
+                  marginRight: '8px'
+                }}
+              >
+                <Power size={13} />
+                <span>{posStoreStatus === 'open' ? 'App Orders: Open' : 'App Orders: Closed'}</span>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: posStoreStatus === 'open' ? '#22c55e' : '#ef4444',
+                    boxShadow: posStoreStatus === 'open' ? '0 0 6px #22c55e' : 'none'
+                  }}
+                />
+              </button>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  border: '1px solid #e2e8f0',
+                  background: '#f8fafc',
+                  color: '#64748b',
+                  marginRight: '8px'
+                }}
+              >
+                <Clock size={13} />
+                <span>App orders controlled by Admin</span>
+              </div>
+            )
+          )}
+
           <button
             className={`foodeology-nav-btn ${activePath === '/' || activePath === '/pos' ? 'active' : ''}`}
             onClick={() => navigate('/')}
